@@ -7,36 +7,41 @@
         <script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
         <script>
             $(document).ready(function () {
+                
+                /** INICIO DE CONEXION ("valida" username)**/
                 var websocket;
-
                 var username = prompt("Ingrese su nombre");
                 if (username == null || username == "") {
                     alert("Debe ingresar un nombre para utilizar el chat, refresque la página");
                     $("#chatForm").remove();
                 } else {
+                    /** establece la conexión (manda username y solicita ultimos 5 chats)**/
                     websocket = io();
                     websocket.emit('username', username);
                     websocket.emit('lastchat');
                 }
-                
-                ////input cambiando
+
+                /** imprime mensaje de "escribiendo..." **/
                 $('#m').keypress(function () {
                     websocket.emit('writing');
                 });
 
-                
-                //mensajes propios
+
+                /** mensajes propios **/
                 $("form").submit(function () {
                     var mensaje = $("#m").val();
                     websocket.emit('chat', mensaje);
                     $("#messages").append($('<li style="text-align: end;">').text("Yo (" + username + "): " + mensaje));
                     $("#m").val("");
+
+                    /**elimina mensaje de "escribiendo..." luego de presionar send**/
                     websocket.emit('stopwriting');
+                    
                     $(document).scrollTop($(document).height());//despues de imprimir un NUEVO mensaje
                     return false;
                 });
 
-                //mensajes externos
+                /** mensajes externos **/
                 websocket.on('mensaje recibido', function (data) { //msg=mensaje
                     console.log("mensaje recibido desde el servidor: " + data.msg);
 
@@ -49,28 +54,35 @@
                     $(document).scrollTop($(document).height());//despues de imprimir un NUEVO mensaje
                 });
 
-
+                /** numero de conexiones **/
                 websocket.on('Conexiones', function (cantConexiones) { //msg=mensaje
                     var msg = "Usuarios conectados: " + cantConexiones;
                     $("#conexiones").text(msg);
                 });
+
+                /** mensaje de baneado (para el baneado) **/
                 websocket.on('mensajeban', function (mensajeban) { //BAN
                     $("#messages").append($('<li style="color:red;">').text(mensajeban));
                     $("#chatForm").remove();
                 });
-                websocket.on('escribiendo', function (mensaje) { //BAN
+
+                /** mensaje de "escribiendo..." **/
+                websocket.on('escribiendo', function (mensaje) {
                     $("#writing").text(mensaje);
                 });
-                websocket.on('stop', function () { //BAN
+
+                /** detiene el mensaje de "escribiendo..." **/
+                websocket.on('stop', function () {
                     $("#writing").text('');
                 });
+
+                /** ULTIMOS 5 CHATS **/
                 websocket.on('getlastchat', function (lastchat) {
                     for (i = 0; i < lastchat.length; i++) {
                         $("#messages").append($('<li>').text(lastchat[i].username + ": " + lastchat[i].msg));
                     }
                     $(document).scrollTop($(document).height());//despues de imprimir un NUEVO mensaje
                 });
-
             });
         </script>
         <style>

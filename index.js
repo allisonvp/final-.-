@@ -19,7 +19,6 @@ var conn = mysql.createConnection({
     database: "teletok"
 });
 
-
 //server init
 server.listen(3000, function () {
     console.log("Servidor corriendo en el puerto 3000");
@@ -27,16 +26,12 @@ server.listen(3000, function () {
 
 //rutas
 app.get("/", function (request, response) {
-
-
     response.sendFile(__dirname + "/index2.html");
-
-
 });
 
 
 var conexiones = 0;
-var lisuras = ["hdp", "mrd", "el delicioso", "sexo", "sex", "el sin respeto", "fuck", "nigga","katty"];
+var lisuras = ["hdp", "mrd", "el delicioso", "sexo", "sex", "el sin respeto", "fuck", "nigga", "katty"];
 var users = {};
 var lastwritten = 0;
 
@@ -57,8 +52,8 @@ io.on('connection', function (websocket) {
     websocket.on('chat', function (msg) {
         console.log("mensaje desde el cliente: " + msg);
 
+        /******* Chekea uso de palabras faltosas (ej. katty) *****/
         var msgsplit = msg.split(" ");
-
         var esfaltoso = false;
         for (i = 0; i < msgsplit.length; i++) {
             if (lisuras.indexOf(msgsplit[i]) >= 0) {
@@ -66,11 +61,16 @@ io.on('connection', function (websocket) {
             }
         }
 
+        /*******Valida faltosidad*****/
         if (!esfaltoso) {
+
             websocket.broadcast.emit('mensaje recibido', {
                 username: users[websocket.id],
                 msg: msg
             });
+
+
+            /*******Guarda nuevo mensaje en BD*****/
             var query = "insert into chat(username,msg) values(?,?)";
             var param = [users[websocket.id], msg];
             conn.query(query, param, function (err, resultado) {
@@ -93,12 +93,18 @@ io.on('connection', function (websocket) {
         //  io.emit('mensaje recibido',msg);
     });
 
+
+    /**setea username del nuevo usuario**/
     websocket.on('username', function (username) {
         users[websocket.id] = username;//nombre -> users[id de conexion]
     });
+
+    /**imprime mensaje de "escribiendo..."**/
     websocket.on('writing', function () {
         var username = users[websocket.id];//nombre -> users[id de conexion]
         websocket.broadcast.emit("escribiendo", username + " está escribiendo...");
+
+        /**********Control de mensaje de "escribiendo..."*********/
         lastwritten++;
         setTimeout(function () {
             lastwritten--;
@@ -108,10 +114,12 @@ io.on('connection', function (websocket) {
         }, 4000);
     });
 
+    /**elimina mensaje de "escribiendo..." luego de presionar send**/
     websocket.on('stopwriting', function () {
         websocket.broadcast.emit("stop");
     });
 
+    /**solicitud de ultimos 5 chats**/
     websocket.on('lastchat', function () {
         var query = "(SELECT * FROM teletok.chat order by idchat DESC limit 5) order by idchat;";
         conn.query(query, function (err, resultado) {
