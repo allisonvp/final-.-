@@ -1,42 +1,77 @@
 <!DOCTYPE html>
 <html>
-    <link rel="shortcut icon" href="#"/>
+    
     <head>
+        <link rel="shortcut icon" href="#"/>
         <script src="/socket.io/socket.io.js"></script>
         <script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
         <script>
             $(document).ready(function () {
-                var websocket = io();
+                var websocket;
 
+                var username = prompt("Ingrese su nombre");
+                if (username == null || username == "") {
+                    alert("Debe ingresar un nombre para utilizar el chat, refresque la página");
+                    $("#chatForm").remove();
+                } else {
+                    websocket = io();
+                    websocket.emit('username', username);
+                    websocket.emit('lastchat');
+                }
+                
+                ////input cambiando
+                $('#m').keypress(function () {
+                    websocket.emit('writing');
+                });
+
+                
+                //mensajes propios
                 $("form").submit(function () {
-
                     var mensaje = $("#m").val();
                     websocket.emit('chat', mensaje);
-                    $("#messages").append($('<li>').text(mensaje));
+                    $("#messages").append($('<li style="text-align: end;">').text("Yo (" + username + "): " + mensaje));
                     $("#m").val("");
+                    websocket.emit('stopwriting');
+                    $(document).scrollTop($(document).height());//despues de imprimir un NUEVO mensaje
                     return false;
                 });
 
-                websocket.on('mensaje recibido', function (msg) { //msg=mensaje
-                    console.log("mensaje recibido desde el servidor: " + msg);
-                    if (msg === "Usuario baneado por faltoso") {
-                        $("#messages").append($('<li style="color:red;">').text(msg));
+                //mensajes externos
+                websocket.on('mensaje recibido', function (data) { //msg=mensaje
+                    console.log("mensaje recibido desde el servidor: " + data.msg);
+
+                    if (data.msg === "Usuario baneado por faltoso") {
+                        $("#messages").append($('<li style="color:red;">').text(data.msg));
                     } else {
-                        $("#messages").append($('<li>').text(msg));
+                        $("#messages").append($('<li>').text(data.username + ": " + data.msg));
                     }
+
+                    $(document).scrollTop($(document).height());//despues de imprimir un NUEVO mensaje
                 });
+
 
                 websocket.on('Conexiones', function (cantConexiones) { //msg=mensaje
                     var msg = "Usuarios conectados: " + cantConexiones;
                     $("#conexiones").text(msg);
                 });
-                websocket.on('mensajeban', function (mensajeban) { //msg=mensaje
+                websocket.on('mensajeban', function (mensajeban) { //BAN
                     $("#messages").append($('<li style="color:red;">').text(mensajeban));
                     $("#chatForm").remove();
                 });
+                websocket.on('escribiendo', function (mensaje) { //BAN
+                    $("#writing").text(mensaje);
+                });
+                websocket.on('stop', function () { //BAN
+                    $("#writing").text('');
+                });
+                websocket.on('getlastchat', function (lastchat) {
+                    for (i = 0; i < lastchat.length; i++) {
+                        $("#messages").append($('<li>').text(lastchat[i].username + ": " + lastchat[i].msg));
+                    }
+                    $(document).scrollTop($(document).height());//despues de imprimir un NUEVO mensaje
+                });
+
             });
-        
-         
         </script>
         <style>
             * {
@@ -92,10 +127,16 @@
     <body>
         <p id="conexiones"></p>
         <ul id="messages"></ul>
+        
+        
         <form id="chatForm" action="">
+            <p id="writing" style="
+                        color: white;
+                        text-align: end;"></p>
             <input id="m" autocomplete="off"/>
             <button>Send</button>
         </form>
+    
     </body>
 </html>
 
