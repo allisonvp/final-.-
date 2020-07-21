@@ -32,42 +32,25 @@ app.get("/", function (request, response) {
 
 
 var conexiones = 0;
-var lisuras = ["hdp", "mrd", "el delicioso", "sexo", "sex", "el sin respeto", "fuck", "nigga"];
-
-io.on('connection', function (websocket) {
+//funcion que recepcione la solucitud del cliente para abrir la comunicacion bidireccional
+io.on('connection', function (websocket) { //escucha cuando se abre una comunicacion a nivel de servidor
     console.log("nuevo usuario");
     conexiones++;
     console.log("cantidad de usuarios: " + conexiones);
     io.emit('Conexiones', conexiones);
 
-
-    websocket.on('disconnect', function () {
+    //escucha cuando se abre una comunicacion a nivel de canal
+    websocket.on('disconnect', function () { //escucha cuando el cliente se desconecta
         console.log("usuario desconectado");
         conexiones--;
         console.log("cantidad de usuarios: " + conexiones);
         io.emit('Conexiones', conexiones);
     });
-
-    websocket.on('chat', function (msg) {
+    websocket.on('chat', function (msg) { //msg=mensaje
         console.log("mensaje desde el cliente: " + msg);
 
-        var msgsplit = msg.split(" ");
-
-        var faltoso = false;
-        for (i = 0; i < msgsplit.length; i++) {
-            if (lisuras.indexOf(msgsplit[i]) >= 0) {
-                faltoso = true;
-            }
-        }
-
-        if (!faltoso) {
-            websocket.broadcast.emit('mensaje recibido', msg);
-        } else {
-            websocket.broadcast.emit('mensaje recibido', "Usuario baneado por faltoso");
-            websocket.emit("mensajeban", "Fuiste eliminado :( por faltoso ctm")
-            websocket.disconnect();
-        }
-
         //  io.emit('mensaje recibido',msg);
+        websocket.broadcast.emit('mensaje recibido', msg);
+
     });
 });
